@@ -80,11 +80,10 @@ int main(int argc, char** argv)
 
 
   const uint8_t write_buffer[1] = { (uint8_t) MPU_9250_REG_ACCEL_XOUT_H };
+  uint8_t read_buffer[14] = { 0 };
 
   while(true)
   {
-    uint8_t read_buffer[14] = { 0 };
-
     const int write_ret = mpu_9250_raw_write(fd, write_buffer, sizeof(write_buffer));
 
     if(0 != write_ret)
