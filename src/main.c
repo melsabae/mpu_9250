@@ -79,13 +79,27 @@ int main(int argc, char** argv)
   setup_mpu_9250(&acf, &gcf, fd, 0b00, 0b00);
 
 
+  const uint8_t write_buffer[1] = { (uint8_t) MPU_9250_REG_ACCEL_XOUT_H };
+
   while(true)
   {
-    const uint8_t write_buffer[1] = { (uint8_t) MPU_9250_REG_ACCEL_XOUT_H };
     uint8_t read_buffer[14] = { 0 };
 
-    write(fd, write_buffer, sizeof(write_buffer));
-    read(fd, read_buffer, sizeof(read_buffer));
+    const int write_ret = mpu_9250_raw_write(fd, write_buffer, sizeof(write_buffer));
+
+    if(0 != write_ret)
+    {
+      fprintf(stderr, "failed to write device, return code %d\n", write_ret);
+      continue;
+    }
+
+    const int read_ret = mpu_9250_raw_read(read_buffer, fd, sizeof(read_buffer));
+
+    if(0 != read_ret)
+    {
+      fprintf(stderr, "failed to read device, return code %d\n", read_ret);
+      continue;
+    }
 
     const int16_t accel_xout = (read_buffer[ 0] << 8) | read_buffer[ 1];
     const int16_t accel_yout = (read_buffer[ 2] << 8) | read_buffer[ 3];
