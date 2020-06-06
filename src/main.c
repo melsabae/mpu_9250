@@ -19,24 +19,12 @@ int main(int argc, char** argv)
   // the sensor allows continuous writes and it automatically increments registers
   // exploit this fact to do a gigantic singular write call to config the sensor
   // pick the first register we want to configure, and then configure everything afterward
-  {
-    const uint8_t config_buffer[] =
-    {
-        MPU_9250_REG_GYRO_CONFIG
-      , MPU_9250_WRITE_GYRO_CONFIG(0, 0, 0, 0b11, 0)
-      , MPU_9250_WRITE_ACCEL_CONFIG_1(0, 0, 0, 0b11)
-      , MPU_9250_WRITE_ACCEL_CONFIG_2(0, 0)
-      , MPU_9250_WRITE_LP_ACCEL_ODR_LPOSC_CLKSEL(11)
-    };
-
-    write(fd, config_buffer, sizeof(config_buffer));
-  }
 
   {
     const uint8_t config_buffer[] =
     {
-        MPU_9250_REG_PWR_MGMT_2
-      , MPU_9250_WRITE_PWR_MGMT_2(0, 0, 0, 0, 0, 0)
+        MPU_9250_REG_PWR_MGMT_1
+      , MPU_9250_WRITE_PWR_MGMT_1(0, 0, 0, 0, 0, 1)
     };
 
     write(fd, config_buffer, sizeof(config_buffer));
@@ -50,12 +38,12 @@ int main(int argc, char** argv)
     write(fd, write_buffer, sizeof(write_buffer));
     read(fd, read_buffer, sizeof(read_buffer));
 
-    const int32_t accel_xout = (read_buffer[ 0] << 8) | read_buffer[ 1] / 16;
-    const int32_t accel_yout = (read_buffer[ 2] << 8) | read_buffer[ 3] / 16;
-    const int32_t accel_zout = (read_buffer[ 4] << 8) | read_buffer[ 5] / 16;
-    const int32_t gyro_xout  = (read_buffer[ 8] << 8) | read_buffer[ 9] / 2000;
-    const int32_t gyro_yout  = (read_buffer[10] << 8) | read_buffer[11] / 2000;
-    const int32_t gyro_zout  = (read_buffer[12] << 8) | read_buffer[13] / 2000;
+    const int32_t accel_xout = (read_buffer[ 0] << 8) | read_buffer[ 1];
+    const int32_t accel_yout = (read_buffer[ 2] << 8) | read_buffer[ 3];
+    const int32_t accel_zout = (read_buffer[ 4] << 8) | read_buffer[ 5];
+    const int32_t gyro_xout  = (read_buffer[ 8] << 8) | read_buffer[ 9];
+    const int32_t gyro_yout  = (read_buffer[10] << 8) | read_buffer[11];
+    const int32_t gyro_zout  = (read_buffer[12] << 8) | read_buffer[13];
 
     //const int32_t temp       = (read_buffer[ 6] << 8) | read_buffer[ 7];
 
@@ -66,13 +54,13 @@ int main(int argc, char** argv)
     puts("");
 
     printf(
-          "%d,%d,%d,%d,%d,%d\n\n"
-        , accel_xout
-        , accel_yout
-        , accel_zout
-        , gyro_xout
-        , gyro_yout
-        , gyro_zout
+          "%f,%f,%f,%f,%f,%f\n\n"
+        , accel_xout * 2.0f / 32768.0f
+        , accel_yout * 2.0f / 32768.0f
+        , accel_zout * 2.0f / 32768.0f
+        , gyro_xout * 250.0f / 32768.0f
+        , gyro_yout * 250.0f / 32768.0f
+        , gyro_zout * 250.0f / 32768.0f
         );
   }
 
