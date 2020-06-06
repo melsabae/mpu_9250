@@ -11,53 +11,46 @@
 
 
 float get_accelerometer_conversion_factor(
-    const int accelerometer_data_rate
+    const uint8_t adr
     )
 {
-  return 0.0f;
-}
+  // shift the value back into the low bit place, add 1, then raise 2 to this power
+  // to get 2, 4, 8, and 16
+  const float magic =
+    (float) (1 << ((MPU_9250_WRITE_ACCEL_CONFIG_1_ACCEL_FS_SEL(adr) >> 3) + 1));
 
-
-int get_accelerometer_data_rate(
-    const int accelerometer_data_rate_requested
-    )
-{
-  return 0;
+  // +- 2g, 4g, 8g, or 16g every 16 bits
+  return magic / 32768.0f;
 }
 
 
 float get_gyroscope_conversion_factor(
-    const int gyroscope_data_rate
+    const int gdr
     )
 {
-  return 0.0f;
-}
+  // shift the value back into the low bit place, then raise 2 to this power
+  // to get 1, 2, 4, or 8
+  const float magic =
+    (float) (1 << (MPU_9250_WRITE_GYRO_CONFIG_GYRO_FS_SEL(gdr) >> 3));
 
-
-int get_gyroscope_data_rate(
-    const int gyroscope_data_rate_requested
-    )
-{
-  return 0;
+  // +- 250, 500, 1000, or 2000 degrees per second per 16 bits
+  return 250.0f * magic / 32768.0f;
 }
 
 
 void setup_mpu_9250(
-      float* accelerometer_conversion_factor
-    , float* gyroscope_conversion_factor
+      float* accel_conversion_factor
+    , float* gyro_conversion_factor
     , const int fd
-    , const int gyroscope_data_rate
-    , const int accelerometer_data_rate
+    , const int accel_data_rate
+    , const int gyro_data_rate
     )
 {
-  const int _a = get_accelerometer_data_rate(accelerometer_data_rate);
-  const int _g = get_gyroscope_data_rate(gyroscope_data_rate);
-
   const uint8_t config_buffer1[] =
   {
       MPU_9250_REG_GYRO_CONFIG
-    , MPU_9250_WRITE_GYRO_CONFIG(0, 0, 0, 0b11, 0) // 2000 dps
-    , MPU_9250_WRITE_ACCEL_CONFIG_1(0, 0, 0, 0b11) // 16g
+    , MPU_9250_WRITE_GYRO_CONFIG(0, 0, 0, gyro_data_rate, 0)
+    , MPU_9250_WRITE_ACCEL_CONFIG_1(0, 0, 0, accel_data_rate)
   };
 
   const uint8_t config_buffer2[] =
@@ -69,8 +62,8 @@ void setup_mpu_9250(
   write(fd, config_buffer1, sizeof(config_buffer1));
   write(fd, config_buffer2, sizeof(config_buffer2));
 
-  *accelerometer_conversion_factor = get_accelerometer_conversion_factor(_a);
-  *gyroscope_conversion_factor = get_gyroscope_conversion_factor(_a);
+  *gyro_conversion_factor = get_gyroscope_conversion_factor(gyro_data_rate);
+  *accel_conversion_factor = get_accelerometer_conversion_factor(accel_data_rate);
 }
 
 
@@ -83,6 +76,14 @@ int main(int argc, char** argv)
   // the sensor allows continuous writes and it automatically increments registers
   // exploit this fact to do a gigantic singular write call to config the sensor
   // pick the first register we want to configure, and then configure everything afterward
+
+
+  float acf = 0.0f;
+  float gcf = 0.0f;
+
+  // +-2G accelerometer, +-250 degrees per second
+  setup_mpu_9250(&acf, &gcf, fd, 0b00, 0b00);
+
 
   while(true)
   {
@@ -100,7 +101,7 @@ int main(int argc, char** argv)
     const int16_t gyro_zout  = (read_buffer[12] << 8) | read_buffer[13];
 
     printf(
-          "%f,%f,%f,%f,%f,%f\n"
+          "%.8f,%.8f,%.8f,%.8f,%.8f,%.8f\n"
         , accel_xout * 16.0f / 32768.0f
         , accel_yout * 16.0f / 32768.0f
         , accel_zout * 16.0f / 32768.0f
