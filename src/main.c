@@ -48,23 +48,23 @@ int main(int argc, char** argv)
     write(fd, write_buffer, sizeof(write_buffer));
     read(fd, read_buffer, sizeof(read_buffer));
 
-    const int32_t accel_xout = (read_buffer[ 0] << 8) | read_buffer[ 1];
-    const int32_t accel_yout = (read_buffer[ 2] << 8) | read_buffer[ 3];
-    const int32_t accel_zout = (read_buffer[ 4] << 8) | read_buffer[ 5];
-    const int32_t gyro_xout  = (read_buffer[ 8] << 8) | read_buffer[ 9];
-    const int32_t gyro_yout  = (read_buffer[10] << 8) | read_buffer[11];
-    const int32_t gyro_zout  = (read_buffer[12] << 8) | read_buffer[13];
+    const int16_t accel_xout = (read_buffer[ 0] << 8) | read_buffer[ 1];
+    const int16_t accel_yout = (read_buffer[ 2] << 8) | read_buffer[ 3];
+    const int16_t accel_zout = (read_buffer[ 4] << 8) | read_buffer[ 5];
+    const int16_t gyro_xout  = (read_buffer[ 8] << 8) | read_buffer[ 9];
+    const int16_t gyro_yout  = (read_buffer[10] << 8) | read_buffer[11];
+    const int16_t gyro_zout  = (read_buffer[12] << 8) | read_buffer[13];
 
     //const int32_t temp       = (read_buffer[ 6] << 8) | read_buffer[ 7];
 
-    for(size_t i = 0; i < sizeof(read_buffer); i ++)
-    {
-      printf("[%zu]:%.2X,", i, read_buffer[i]);
-    }
-    puts("");
+    //for(size_t i = 0; i < sizeof(read_buffer); i ++)
+    //{
+    //  printf("[%zu]:%.2X,", i, read_buffer[i]);
+    //}
+    //puts("");
 
     printf(
-          "%f,%f,%f,%f,%f,%f\n\n"
+          "%f,%f,%f,%f,%f,%f\n"
         , accel_xout * 16.0f / 32768.0f
         , accel_yout * 16.0f / 32768.0f
         , accel_zout * 16.0f / 32768.0f
