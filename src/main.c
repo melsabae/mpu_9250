@@ -19,6 +19,16 @@ int main(int argc, char** argv)
   // the sensor allows continuous writes and it automatically increments registers
   // exploit this fact to do a gigantic singular write call to config the sensor
   // pick the first register we want to configure, and then configure everything afterward
+  {
+    const uint8_t config_buffer[] =
+    {
+        MPU_9250_REG_GYRO_CONFIG
+      , MPU_9250_WRITE_GYRO_CONFIG(0, 0, 0, 0b11, 0) // 2000 dps
+      , MPU_9250_WRITE_ACCEL_CONFIG_1(0, 0, 0, 0b11) // 16g
+    };
+
+    write(fd, config_buffer, sizeof(config_buffer));
+  }
 
   {
     const uint8_t config_buffer[] =
@@ -55,12 +65,12 @@ int main(int argc, char** argv)
 
     printf(
           "%f,%f,%f,%f,%f,%f\n\n"
-        , accel_xout * 2.0f / 32768.0f
-        , accel_yout * 2.0f / 32768.0f
-        , accel_zout * 2.0f / 32768.0f
-        , gyro_xout * 250.0f / 32768.0f
-        , gyro_yout * 250.0f / 32768.0f
-        , gyro_zout * 250.0f / 32768.0f
+        , accel_xout * 16.0f / 32768.0f
+        , accel_yout * 16.0f / 32768.0f
+        , accel_zout * 16.0f / 32768.0f
+        , gyro_xout * 2000.0f / 32768.0f
+        , gyro_yout * 2000.0f / 32768.0f
+        , gyro_zout * 2000.0f / 32768.0f
         );
   }
 
