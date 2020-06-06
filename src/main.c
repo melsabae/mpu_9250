@@ -4,7 +4,14 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+
+#include <zmq.h>
+
+
 #include "mpu_9250.h"
+
+
+const char* pub_endpoint = "ipc:///tmp/xsub";
 
 
 typedef struct
@@ -67,6 +74,28 @@ int main(int argc, char** argv)
   const size_t mpu_9250_ad_pin = I2CDETECT_ADDRESS_AD0;
   int fd = 0;
 
+  void* ctx = zmq_ctx_new();
+
+  if(NULL == ctx)
+  {
+    fprintf(stderr, "failed to get a zmq socket");
+    return -1;
+  }
+
+  void* pub = zmq_socket(ctx, ZMQ_PUB);
+
+  if(NULL == pub)
+  {
+    fprintf(stderr, "failed to get a pub socket");
+    return -2;
+  }
+
+  if(0 != zmq_connect(pub, pub_endpoint))
+  {
+    fprintf(stderr, "failed to connect pub socket to endpoint");
+    return -3;
+  }
+
   int return_code = mpu_9250_open_device(&fd, device_path, mpu_9250_ad_pin);
 
   if(0 != return_code)
@@ -78,7 +107,7 @@ int main(int argc, char** argv)
         , return_code
         );
 
-    return -1;
+    return -4;
   }
 
 
@@ -140,25 +169,25 @@ int main(int argc, char** argv)
 
     memcpy(serialized_buffer, &thing, sizeof(thing));
 
-    printf(
-        "%ld.%lu,%ld.%lu%.8f,%.8f,%.8f,%.8f,%.8f,%.8f\n"
-      , thing.begin_timestamp.tv_sec
-      , thing.begin_timestamp.tv_usec
-      , thing.end_timestamp.tv_sec
-      , thing.end_timestamp.tv_usec
-      , thing.accel_x
-      , thing.accel_y
-      , thing.accel_z
-      , thing.gyro_x
-      , thing.gyro_y
-      , thing.gyro_z
-    );
+    //printf(
+    //    "%ld.%lu,%ld.%lu%.8f,%.8f,%.8f,%.8f,%.8f,%.8f\n"
+    //  , thing.begin_timestamp.tv_sec
+    //  , thing.begin_timestamp.tv_usec
+    //  , thing.end_timestamp.tv_sec
+    //  , thing.end_timestamp.tv_usec
+    //  , thing.accel_x
+    //  , thing.accel_y
+    //  , thing.accel_z
+    //  , thing.gyro_x
+    //  , thing.gyro_y
+    //  , thing.gyro_z
+    //);
 
-    for(size_t i = 0; i < sizeof(thing); i ++)
+    if(sizeof(thing) != zmq_send(pub, serialized_buffer, sizeof(thing), 0))
     {
-      printf("%.2X,", serialized_buffer[i] & 0xff);
+      fprintf(stderr, "failed to send data to pub socket");
+      continue;
     }
-    puts("");
   }
 
 
