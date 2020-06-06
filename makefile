@@ -40,7 +40,6 @@ RELEASE_EXECUTABLE        := $(RELEASE_BUILD_ROOT)/$(EXECUTABLE)_dbg
 RELEASE_COMPILER_LINE     := $(RELEASE_COMPILER_OPTIONS) $(RELEASE_INC_PATHS) $(RELEASE_LIB_PATHS) $(RELEASE_LIB_LINKER_FLAGS)
 
 
-
 define compile
 	$(COMPILER) $1 -o $2 $3
 endef
@@ -48,14 +47,14 @@ endef
 
 define compile_object
 	@$(info $(shell date +%s.%N) compiling $3  ->  $2)
-	$(call compile, $1 -c, $2, $3)
+	@$(call compile, $1 -c, $2, $3)
 	@$(info $(shell date +%s.%N) compiled  $3  ->  $2)
 endef
 
 
 define compile_binary
 	@$(info $(shell date +%s.%N) compiling $2)
-	$(call compile, $1, $2, $3)
+	@$(call compile, $1, $2, $3)
 	@$(info $(shell date +%s.%N) compiled  $2)
 endef
 
