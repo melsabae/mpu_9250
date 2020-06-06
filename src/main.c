@@ -90,6 +90,7 @@ int main(int argc, char** argv)
     if(0 != write_ret)
     {
       fprintf(stderr, "failed to write device, return code %d\n", write_ret);
+      fflush(stderr);
       continue;
     }
 
@@ -98,6 +99,7 @@ int main(int argc, char** argv)
     if(0 != read_ret)
     {
       fprintf(stderr, "failed to read device, return code %d\n", read_ret);
+      fflush(stderr);
       continue;
     }
 
