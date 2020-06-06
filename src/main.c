@@ -1,11 +1,7 @@
-#include <fcntl.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <sys/time.h>
 #include <unistd.h>
-#include <linux/i2c-dev.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-#include <inttypes.h>
 
 #include "mpu_9250.h"
 
@@ -82,8 +78,19 @@ int main(int argc, char** argv)
   const uint8_t write_buffer[1] = { (uint8_t) MPU_9250_REG_ACCEL_XOUT_H };
   uint8_t read_buffer[14] = { 0 };
 
+  struct timeval begin;
+  struct timeval end;
+
   while(true)
   {
+    const int begin_ret = gettimeofday(&begin, NULL);
+    if(0 != begin_ret)
+    {
+      fprintf(stderr, "failed to get begin timestamp, return code %d\n", begin_ret);
+      fflush(stderr);
+      continue;
+    }
+
     const int write_ret = mpu_9250_raw_write(fd, write_buffer, sizeof(write_buffer));
 
     if(0 != write_ret)
@@ -94,6 +101,14 @@ int main(int argc, char** argv)
     }
 
     const int read_ret = mpu_9250_raw_read(read_buffer, fd, sizeof(read_buffer));
+    const int end_ret = gettimeofday(&end, NULL);
+
+    if(0 != end_ret)
+    {
+      fprintf(stderr, "failed to end timestamp, return code %d\n", end_ret);
+      fflush(stderr);
+      continue;
+    }
 
     if(0 != read_ret)
     {
@@ -110,7 +125,11 @@ int main(int argc, char** argv)
     const int16_t gyro_zout  = (read_buffer[12] << 8) | read_buffer[13];
 
     printf(
-          "%.8f,%.8f,%.8f,%.8f,%.8f,%.8f\n"
+          "%ld.%lu,%ld.%lu%.8f,%.8f,%.8f,%.8f,%.8f,%.8f\n"
+          , begin.tv_sec
+          , begin.tv_usec
+          , end.tv_sec
+          , end.tv_usec
         , accel_xout * acf
         , accel_yout * acf
         , accel_zout * acf
