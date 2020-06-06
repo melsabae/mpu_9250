@@ -1,9 +1,23 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
 
 #include "mpu_9250.h"
+
+
+typedef struct
+{
+  struct timeval begin_timestamp;
+  struct timeval end_timestamp;
+  float accel_x;
+  float accel_y;
+  float accel_z;
+  float gyro_x;
+  float gyro_y;
+  float gyro_z;
+} MPU_9250_Thing;
 
 
 int setup_mpu_9250(
@@ -78,12 +92,12 @@ int main(int argc, char** argv)
   const uint8_t write_buffer[1] = { (uint8_t) MPU_9250_REG_ACCEL_XOUT_H };
   uint8_t read_buffer[14] = { 0 };
 
-  struct timeval begin;
-  struct timeval end;
+  MPU_9250_Thing thing;
+  uint8_t serialized_buffer[sizeof(MPU_9250_Thing)] = { 0 };
 
   while(true)
   {
-    const int begin_ret = gettimeofday(&begin, NULL);
+    const int begin_ret = gettimeofday(&thing.begin_timestamp, NULL);
     if(0 != begin_ret)
     {
       fprintf(stderr, "failed to get begin timestamp, return code %d\n", begin_ret);
@@ -101,7 +115,7 @@ int main(int argc, char** argv)
     }
 
     const int read_ret = mpu_9250_raw_read(read_buffer, fd, sizeof(read_buffer));
-    const int end_ret = gettimeofday(&end, NULL);
+    const int end_ret = gettimeofday(&thing.end_timestamp, NULL);
 
     if(0 != end_ret)
     {
@@ -117,26 +131,34 @@ int main(int argc, char** argv)
       continue;
     }
 
-    const int16_t accel_xout = (read_buffer[ 0] << 8) | read_buffer[ 1];
-    const int16_t accel_yout = (read_buffer[ 2] << 8) | read_buffer[ 3];
-    const int16_t accel_zout = (read_buffer[ 4] << 8) | read_buffer[ 5];
-    const int16_t gyro_xout  = (read_buffer[ 8] << 8) | read_buffer[ 9];
-    const int16_t gyro_yout  = (read_buffer[10] << 8) | read_buffer[11];
-    const int16_t gyro_zout  = (read_buffer[12] << 8) | read_buffer[13];
+    thing.accel_x = acf * ((read_buffer[ 0] << 8) | read_buffer[ 1]);
+    thing.accel_y = acf * ((read_buffer[ 2] << 8) | read_buffer[ 3]);
+    thing.accel_z = acf * ((read_buffer[ 4] << 8) | read_buffer[ 5]);
+    thing.gyro_x  = gcf * ((read_buffer[ 8] << 8) | read_buffer[ 9]);
+    thing.gyro_y  = gcf * ((read_buffer[10] << 8) | read_buffer[11]);
+    thing.gyro_z  = gcf * ((read_buffer[12] << 8) | read_buffer[13]);
+
+    memcpy(serialized_buffer, &thing, sizeof(thing));
 
     printf(
-          "%ld.%lu,%ld.%lu%.8f,%.8f,%.8f,%.8f,%.8f,%.8f\n"
-          , begin.tv_sec
-          , begin.tv_usec
-          , end.tv_sec
-          , end.tv_usec
-        , accel_xout * acf
-        , accel_yout * acf
-        , accel_zout * acf
-        , gyro_xout *  gcf
-        , gyro_yout *  gcf
-        , gyro_zout *  gcf
-        );
+        "%ld.%lu,%ld.%lu%.8f,%.8f,%.8f,%.8f,%.8f,%.8f\n"
+      , thing.begin_timestamp.tv_sec
+      , thing.begin_timestamp.tv_usec
+      , thing.end_timestamp.tv_sec
+      , thing.end_timestamp.tv_usec
+      , thing.accel_x
+      , thing.accel_y
+      , thing.accel_z
+      , thing.gyro_x
+      , thing.gyro_y
+      , thing.gyro_z
+    );
+
+    for(size_t i = 0; i < sizeof(thing); i ++)
+    {
+      printf("%.2X,", serialized_buffer[i] & 0xff);
+    }
+    puts("");
   }
 
 
