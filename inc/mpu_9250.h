@@ -585,6 +585,37 @@ typedef enum
 } MPU_9250_Register;
 
 
+int mpu_9250_open_device(
+      int* fd
+    , const char* device_path
+    , const size_t mpu_9250_ad_pin
+    ) __attribute__((warn_unused_result)) ;
+
+
+int mpu_9250_raw_read(
+      uint8_t* data
+    , const int fd
+    , const size_t len
+    ) __attribute__((warn_unused_result)) ;
+
+
+int mpu_9250_raw_write(
+      const int fd
+    , const uint8_t* data
+    , const size_t len
+    ) __attribute__((warn_unused_result)) ;
+
+
+float mpu_9250_get_accel_conversion_factor(
+    const uint8_t accel_data_rate
+    ) __attribute__((warn_unused_result)) ;
+
+
+float mpu_9250_get_gyro_conversion_factor(
+    const uint8_t gyro_data_rate
+    ) __attribute__((warn_unused_result)) ;
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -10,35 +10,7 @@
 #include "mpu_9250.h"
 
 
-float get_accelerometer_conversion_factor(
-    const uint8_t adr
-    )
-{
-  // shift the value back into the low bit place, add 1, then raise 2 to this power
-  // to get 2, 4, 8, and 16
-  const float magic =
-    (float) (1 << ((MPU_9250_WRITE_ACCEL_CONFIG_1_ACCEL_FS_SEL(adr) >> 3) + 1));
-
-  // +- 2g, 4g, 8g, or 16g every 16 bits
-  return magic / 32768.0f;
-}
-
-
-float get_gyroscope_conversion_factor(
-    const int gdr
-    )
-{
-  // shift the value back into the low bit place, then raise 2 to this power
-  // to get 1, 2, 4, or 8
-  const float magic =
-    (float) (1 << (MPU_9250_WRITE_GYRO_CONFIG_GYRO_FS_SEL(gdr) >> 3));
-
-  // +- 250, 500, 1000, or 2000 degrees per second per 16 bits
-  return 250.0f * magic / 32768.0f;
-}
-
-
-void setup_mpu_9250(
+int setup_mpu_9250(
       float* accel_conversion_factor
     , float* gyro_conversion_factor
     , const int fd
@@ -59,19 +31,45 @@ void setup_mpu_9250(
     , MPU_9250_WRITE_PWR_MGMT_1(0, 0, 0, 0, 0, 1)
   };
 
-  write(fd, config_buffer1, sizeof(config_buffer1));
-  write(fd, config_buffer2, sizeof(config_buffer2));
+  if(0 != mpu_9250_raw_write(fd, config_buffer1, sizeof(config_buffer1)))
+  {
+    return -2;
+  }
 
-  *gyro_conversion_factor = get_gyroscope_conversion_factor(gyro_data_rate);
-  *accel_conversion_factor = get_accelerometer_conversion_factor(accel_data_rate);
+  if(0 != mpu_9250_raw_write(fd, config_buffer2, sizeof(config_buffer2)))
+  {
+    return -3;
+  }
+
+  *gyro_conversion_factor = mpu_9250_get_gyro_conversion_factor(gyro_data_rate);
+  *accel_conversion_factor = mpu_9250_get_accel_conversion_factor(accel_data_rate);
+
+  return 0;
 }
 
 
 int main(int argc, char** argv)
 {
 	const char* device_path = "/dev/i2c-1";
-	const int fd = open(device_path, O_RDWR);
-	(void) ioctl(fd, I2C_SLAVE, I2CDETECT_ADDRESS_AD0); // AD0 is pulled down on breakout board
+  const size_t mpu_9250_ad_pin = I2CDETECT_ADDRESS_AD0;
+  int fd = 0;
+
+  int return_code = mpu_9250_open_device(&fd, device_path, mpu_9250_ad_pin);
+
+  if(0 != return_code)
+  {
+    fprintf(
+        stderr
+        , "failed to open device %s, return code %d\n"
+        , device_path
+        , return_code
+        );
+
+    return -1;
+  }
+
+	//const int fd = open(device_path, O_RDWR);
+	//(void) ioctl(fd, I2C_SLAVE, I2CDETECT_ADDRESS_AD0); // AD0 is pulled down on breakout board
 
   // the sensor allows continuous writes and it automatically increments registers
   // exploit this fact to do a gigantic singular write call to config the sensor
