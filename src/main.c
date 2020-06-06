@@ -16,6 +16,32 @@ int main(int argc, char** argv)
 	const int fd = open(device_path, O_RDWR);
 	(void) ioctl(fd, I2C_SLAVE, I2CDETECT_ADDRESS_AD0); // AD0 is pulled down on breakout board
 
+  // the sensor allows continuous writes and it automatically increments registers
+  // exploit this fact to do a gigantic singular write call to config the sensor
+  // pick the first register we want to configure, and then configure everything afterward
+  {
+    const uint8_t config_buffer[] =
+    {
+        MPU_9250_REG_GYRO_CONFIG
+      , MPU_9250_WRITE_GYRO_CONFIG(0, 0, 0, 0b11, 0)
+      , MPU_9250_WRITE_ACCEL_CONFIG_1(0, 0, 0, 0b11)
+      , MPU_9250_WRITE_ACCEL_CONFIG_2(0, 0)
+      , MPU_9250_WRITE_LP_ACCEL_ODR_LPOSC_CLKSEL(11)
+    };
+
+    write(fd, config_buffer, sizeof(config_buffer));
+  }
+
+  {
+    const uint8_t config_buffer[] =
+    {
+        MPU_9250_REG_PWR_MGMT_2
+      , MPU_9250_WRITE_PWR_MGMT_2(0, 0, 0, 0, 0, 0)
+    };
+
+    write(fd, config_buffer, sizeof(config_buffer));
+  }
+
   while(true)
   {
     const uint8_t write_buffer[1] = { 0x3b };
