@@ -18,6 +18,9 @@ int setup_mpu_9250(
     , const int gyro_data_rate
     )
 {
+  // the sensor allows continuous writes and it automatically increments registers
+  // exploit this fact to do a gigantic singular write call to config the sensor
+  // pick the first register we want to configure, and then configure everything afterward
   const uint8_t config_buffer1[] =
   {
       MPU_9250_REG_GYRO_CONFIG
@@ -68,13 +71,6 @@ int main(int argc, char** argv)
     return -1;
   }
 
-	//const int fd = open(device_path, O_RDWR);
-	//(void) ioctl(fd, I2C_SLAVE, I2CDETECT_ADDRESS_AD0); // AD0 is pulled down on breakout board
-
-  // the sensor allows continuous writes and it automatically increments registers
-  // exploit this fact to do a gigantic singular write call to config the sensor
-  // pick the first register we want to configure, and then configure everything afterward
-
 
   float acf = 0.0f;
   float gcf = 0.0f;
@@ -85,7 +81,7 @@ int main(int argc, char** argv)
 
   while(true)
   {
-    const uint8_t write_buffer[1] = { 0x3b };
+    const uint8_t write_buffer[1] = { (uint8_t) MPU_9250_REG_ACCEL_XOUT_H };
     uint8_t read_buffer[14] = { 0 };
 
     write(fd, write_buffer, sizeof(write_buffer));
@@ -100,12 +96,12 @@ int main(int argc, char** argv)
 
     printf(
           "%.8f,%.8f,%.8f,%.8f,%.8f,%.8f\n"
-        , accel_xout * 16.0f / 32768.0f
-        , accel_yout * 16.0f / 32768.0f
-        , accel_zout * 16.0f / 32768.0f
-        , gyro_xout * 2000.0f / 32768.0f
-        , gyro_yout * 2000.0f / 32768.0f
-        , gyro_zout * 2000.0f / 32768.0f
+        , accel_xout * acf
+        , accel_yout * acf
+        , accel_zout * acf
+        , gyro_xout *  gcf
+        , gyro_yout *  gcf
+        , gyro_zout *  gcf
         );
   }
 
