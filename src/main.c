@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 
 
@@ -16,8 +16,8 @@ const char* pub_endpoint = "ipc:///tmp/xsub";
 
 typedef struct
 {
-  struct timeval begin_timestamp;
-  struct timeval end_timestamp;
+  struct timespec begin_timestamp;
+  struct timespec end_timestamp;
   float accel_x;
   float accel_y;
   float accel_z;
@@ -27,6 +27,7 @@ typedef struct
 } MPU_9250_Thing;
 
 
+__attribute__((warn_unused_result))
 int setup_mpu_9250(
       float* accel_conversion_factor
     , float* gyro_conversion_factor
@@ -114,8 +115,21 @@ int main(int argc, char** argv)
   float acf = 0.0f;
   float gcf = 0.0f;
 
+
   // +-2G accelerometer, +-250 degrees per second
-  setup_mpu_9250(&acf, &gcf, fd, 0b00, 0b00);
+  return_code = setup_mpu_9250(&acf, &gcf, fd, 0b00, 0b00);
+
+  if(0 != return_code)
+  {
+    fprintf(stderr, "failed to config device, return code %d\n", return_code);
+
+    if(0 != close(fd))
+    {
+      return -5;
+    }
+
+    return -6;
+  }
 
 
   const uint8_t write_buffer[1] = { (uint8_t) MPU_9250_REG_ACCEL_XOUT_H };
@@ -126,7 +140,7 @@ int main(int argc, char** argv)
 
   while(true)
   {
-    const int begin_ret = gettimeofday(&thing.begin_timestamp, NULL);
+    const int begin_ret = clock_gettime(CLOCK_REALTIME, &thing.begin_timestamp);
     if(0 != begin_ret)
     {
       fprintf(stderr, "failed to get begin timestamp, return code %d\n", begin_ret);
@@ -144,7 +158,7 @@ int main(int argc, char** argv)
     }
 
     const int read_ret = mpu_9250_raw_read(read_buffer, fd, sizeof(read_buffer));
-    const int end_ret = gettimeofday(&thing.end_timestamp, NULL);
+    const int end_ret = clock_gettime(CLOCK_REALTIME, &thing.end_timestamp);
 
     if(0 != end_ret)
     {
@@ -160,12 +174,12 @@ int main(int argc, char** argv)
       continue;
     }
 
-    thing.accel_x = acf * ((read_buffer[ 0] << 8) | read_buffer[ 1]);
-    thing.accel_y = acf * ((read_buffer[ 2] << 8) | read_buffer[ 3]);
-    thing.accel_z = acf * ((read_buffer[ 4] << 8) | read_buffer[ 5]);
-    thing.gyro_x  = gcf * ((read_buffer[ 8] << 8) | read_buffer[ 9]);
-    thing.gyro_y  = gcf * ((read_buffer[10] << 8) | read_buffer[11]);
-    thing.gyro_z  = gcf * ((read_buffer[12] << 8) | read_buffer[13]);
+    thing.accel_x = acf * ((float) (int16_t) ((read_buffer[ 0] << 8) | read_buffer[ 1]));
+    thing.accel_y = acf * ((float) (int16_t) ((read_buffer[ 2] << 8) | read_buffer[ 3]));
+    thing.accel_z = acf * ((float) (int16_t) ((read_buffer[ 4] << 8) | read_buffer[ 5]));
+    thing.gyro_x  = gcf * ((float) (int16_t) ((read_buffer[ 8] << 8) | read_buffer[ 9]));
+    thing.gyro_y  = gcf * ((float) (int16_t) ((read_buffer[10] << 8) | read_buffer[11]));
+    thing.gyro_z  = gcf * ((float) (int16_t) ((read_buffer[12] << 8) | read_buffer[13]));
 
     memcpy(serialized_buffer, &thing, sizeof(thing));
 
@@ -182,6 +196,8 @@ int main(int argc, char** argv)
     //  , thing.gyro_y
     //  , thing.gyro_z
     //);
+
+    //printf("%zu,%zu\n", sizeof(thing.end_timestamp.tv_sec), sizeof(thing.end_timestamp.tv_nsec));
 
     if(sizeof(thing) != zmq_send(pub, serialized_buffer, sizeof(thing), 0))
     {
