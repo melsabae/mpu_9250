@@ -2,6 +2,7 @@ EXECUTABLE								:= $(shell basename $(shell pwd))
 LIB_LIB_PATH							:= lib
 LIB_INC_PATH							:= inc
 LIB_SRC_PATH							:= src
+DOC_DIR                   := doc
 BUILD_ROOT								:= build
 SOURCE_FILES							:= $(notdir $(shell find $(LIB_SRC_PATH) -type f -iname '*.c'))
 VPATH                     := $(shell find $(LIB_SRC_PATH) -type d)
@@ -66,7 +67,7 @@ $(DEBUG_BUILD_ROOT)/%.o: %.c makefile | dirs
 	$(call compile_object, $(DEBUG_COMPILER_LINE), $@, $<)
 
 
-$(DEBUG_EXECUTABLE): $(DEBUG_OBJECT_FILES)
+$(DEBUG_EXECUTABLE): $(DEBUG_OBJECT_FILES) tags
 	$(call compile_binary, $(DEBUG_COMPILER_LINE), $@, $(DEBUG_OBJECT_FILES))
 
 
@@ -75,7 +76,7 @@ $(RELEASE_BUILD_ROOT)/%.o: %.c makefile | dirs
 	$(call compile_object, $(RELEASE_COMPILER_LINE), $@, $<)
 
 
-$(RELEASE_EXECUTABLE): $(RELEASE_OBJECT_FILES)
+$(RELEASE_EXECUTABLE): $(RELEASE_OBJECT_FILES) tags
 	$(call compile_binary, $(RELEASE_COMPILER_LINE), $@, $(RELEASE_OBJECT_FILES))
 	@strip $(RELEASE_EXECUTABLE)
 
@@ -91,6 +92,14 @@ clean:
 all: debug
 debug: $(DEBUG_EXECUTABLE)
 release: $(RELEASE_EXECUTABLE)
+
+
+tags:
+	@ctags -R -h .h .
+
+
+docs:
+	@doxygen Doxyfile
 
 
 $(DEBUG_DEP_FILES):
